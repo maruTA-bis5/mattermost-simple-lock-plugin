@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"net/http"
+	"strings"
 	"sync"
 	"time"
 
@@ -10,6 +11,8 @@ import (
 	"github.com/mattermost/mattermost-server/model"
 	"github.com/mattermost/mattermost-server/plugin"
 )
+
+const PluginId = "net.bis5.mattermost.simplelock"
 
 type Plugin struct {
 	plugin.MattermostPlugin
@@ -22,6 +25,7 @@ type Plugin struct {
 	configuration *configuration
 
 	router *mux.Router
+	serverConfig *model.Config
 }
 
 func (p *Plugin) OnActivate() error {
@@ -38,6 +42,12 @@ func (p *Plugin) OnActivate() error {
 		return err
 	}
 	p.router = p.initApi()
+	p.OnConfigurationChange()
+	return nil
+}
+
+func (p *Plugin) OnConfigurationChange() error {
+	p.ServerConfig = p.API.GetConfig()
 	return nil
 }
 
@@ -45,17 +55,18 @@ func (p *Plugin) ExecuteCommand(c *plugin.Context, args *model.CommandArgs) (*mo
 	p.resourceLock.Lock()
 	defer p.resourceLock.Unlock()
 
-	targetResource := // TODO
+	parts := strings.Split(args.Command, " ")
+	targetResource := parts[0][1:]
 	if p.isAlreadyLocked(targetResource) {
 		errResponse := &model.CommandResponse {
-			ResponseType:	model.COMMAND_RESPONSE_TYPE_EPHEMERAL,
-			Text:			"Resource ["+targetResource+"] is already locked.",
+			ResponseType: model.COMMAND_RESPONSE_TYPE_EPHEMERAL,
+			Text: "Resource ["+targetResource+"] is already locked.",
 		}
 		return errResponse, nil
 	}
 	p.lockResource(targetResource)
 
-	message := // TODO
+	message := strings.Join(parts[1:], " ")
 
 	userId := args.UserId
 	user, err := p.API.GetUser(userId)
@@ -71,37 +82,46 @@ func (p *Plugin) ExecuteCommand(c *plugin.Context, args *model.CommandArgs) (*mo
 	integrationContext["message"] = message
 	integrationContext["username"] = username
 	releaseIntegration := &model.PostActionIntegration {
-		URL:	fmt.Sprintf("%s/plugins/%s/api/release", siteUrl, pluginId),
+		URL: fmt.Sprintf("%s/plugins/%s/api/release", p.ServerConfig.ServiceSettings.SiteUrl, PluginId),
 		Context: integrationContext,
 	}
 
 	releaseAction := &model.PostAction {
-		Name:	"Release Lock",
-		Integration:	releaseIntegration,
+		Name: "Release Lock",
+		Integration: releaseIntegration,
 	}
 
 	toReleaseAttachment := &model.SlackAttachment {
-		PreText:	targetResource+" "+message+" by "+username,
-		Actions:	releaseAction,
+		PreText: targetResource+" "+message+" by "+username,
+		Actions: releaseAction,
 	}
 
 	response := &model.CommandResponse{
-		ResponseType:	model.COMMAND_RESPONSE_TYPE_IN_CHANNEL,
-		Text:			text,
-		Username:		username,
-		ChannelId:		channelId,
-		Attachments:	attachments,
+		ResponseType: model.COMMAND_RESPONSE_TYPE_IN_CHANNEL,
+		Text: text,
+		Username: username,
+		ChannelId: channelId,
+		Attachments: attachments,
 	}
 	return response, nil
 }
 
 func (p *Plugin) isAlreadyLocked(targetResource string) bool {
-	//TODO
-	return false
+	key := "simplelock_locked_"+targetResource
+	value, err := p.API.KVGet(key)
+	if err != nil {
+		// TODO error log
+	}
+	return value != nil
 }
 
 func (p *Plugin) lockResource(targetResource string) {
-	// TODO
+	key := "simplelock_locked_"+targetResource
+	value := []byte("locked")
+	err = p.API.KVSet(key, value)
+	if err != nil {
+		// TODO error log
+	}
 }
 
 func (p *Plugin) ServeHTTP(c *plugin.Context, w http.ResponseWriter, r *http.Request) {
@@ -134,7 +154,9 @@ func (p *Plugin) handleRelease(w http.ResponseWriter, r *http.Request) {
 	response := &model.PostActionIntegrationResponse{}
 	if !p.isAlreadyLocked(targetResource) {
 		response.EphemeralText("Resourece ["+targetResource+"] did not locked.")
-		return response
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write(response.ToJson())
 	}
 
 	p.unlockResourece(targetResource)
@@ -156,6 +178,10 @@ func (p *Plugin) handleRelease(w http.ResponseWriter, r *http.Request) {
 }
 
 func (p *Plugin) unlockResource(targetResource string) {
-	// TODO
+	key := "simplelock_locked_"+targetResource
+	err := p.KVDelete(key)
+	if err != nil {
+		// TODO error log
+	}
 }
 
