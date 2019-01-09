@@ -131,7 +131,7 @@ func (p *Plugin) ServeHTTP(c *plugin.Context, w http.ResponseWriter, r *http.Req
 func (p *Plugin) initApi() *mux.Router {
 	r := mux.NewRouter()
 	apiRouter := r.PathPrefix("/api").SubRouter()
-	apiRouter.HandleFunc("/release"), p.handleRelease).Methods("POST")
+	apiRouter.HandleFunc("/release", p.handleRelease).Methods("POST")
 	return r
 }
 
