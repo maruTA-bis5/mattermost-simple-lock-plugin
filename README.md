@@ -1,23 +1,9 @@
-# Sample Plugin [![Build Status](https://travis-ci.org/mattermost/mattermost-plugin-sample.svg?branch=master)](https://travis-ci.org/mattermost/mattermost-plugin-sample)
+# Mattermost Simple Lock Plugin [![Build Status](https://travis-ci.org/maruTA-bis5/mattermost-simple-lock-plugin.svg?branch=master)](https://travis-ci.org/maruTA-bis5/mattermost-simple-lock-plugin)
 
-This plugin serves as a starting point for writing a Mattermost plugin. Feel free to base your own plugin off this repository.
+This plugin based on [mattermost/mattermost-plugin-sample](https://github.com/mattermost/mattermost-plugin-sample).
 
 ## Getting Started
-Shallow clone the repository to a directory matching your plugin name:
-```
-git clone --depth 1 https://github.com/mattermost/mattermost-plugin-sample com.example.my-plugin
-```
-
-Edit `plugin.json` with your `id`, `name`, and `description`:
-```
-{
-    "id": "com.example.my-plugin",
-    "name": "My Plugin",
-    "description": "A plugin to enhance Mattermost."
-}
-```
-
-Build your plugin:
+Build plugin:
 ```
 make
 ```
@@ -40,8 +26,3 @@ Alternatively, if you are running your `mattermost-server` out of a sibling dire
 
 In production, deploy and upload your plugin via the [System Console](https://about.mattermost.com/default-plugin-uploads).
 
-## Q&A
-
-### How do I make a server-only or web app-only plugin?
-
-Simply delete the `server` or `webapp` folders and remove the corresponding sections from `plugin.json`. The build scripts will skip the missing portions automatically.
