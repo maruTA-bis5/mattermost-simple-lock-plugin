@@ -78,6 +78,7 @@ func (p *Plugin) OnConfigurationChange() error {
 	}
 
 	p.setConfiguration(configuration)
+	p.serverConfig = p.API.GetConfig()
 
 	return nil
 }
