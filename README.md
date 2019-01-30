@@ -1,6 +1,7 @@
 # Mattermost Simple Lock Plugin [![Build Status](https://travis-ci.org/maruTA-bis5/mattermost-simple-lock-plugin.svg?branch=master)](https://travis-ci.org/maruTA-bis5/mattermost-simple-lock-plugin)
 
-This plugin based on [mattermost/mattermost-plugin-sample](https://github.com/mattermost/mattermost-plugin-sample).
+- This plugin based on [mattermost/mattermost-plugin-sample](https://github.com/mattermost/mattermost-plugin-sample).
+- This plugin is rewrited version of [maruTA-bis5/mattermost-simple-lock](https://github.com/maruTA-bis5/mattermost-simple-lock) integration.
 
 ## Getting Started
 Build plugin:
