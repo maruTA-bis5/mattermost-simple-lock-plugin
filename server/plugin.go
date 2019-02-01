@@ -50,18 +50,17 @@ func (p *Plugin) ExecuteCommand(c *plugin.Context, args *model.CommandArgs) (*mo
 	defer p.resourceLock.Unlock()
 
 	parts := strings.Split(args.Command, " ")
-	targetResource := parts[0][1:]
+	targetResource := parts[1]
 	if p.isAlreadyLocked(targetResource) {
 		errResponse := &model.CommandResponse{
 			ResponseType: model.COMMAND_RESPONSE_TYPE_EPHEMERAL,
-			Text:         "Resource [" + targetResource + "] is already locked.",
+			Text:         fmt.Sprintf("Resource [%s] is already locked.", targetResource),
 		}
 		return errResponse, nil
 	}
 	p.lockResource(targetResource)
 
-	resourceName := parts[0]
-	message := strings.Join(parts[1:], " ")
+	message := strings.Join(parts[2:], " ")
 
 	userId := args.UserId
 	user, err := p.API.GetUser(userId)
@@ -70,10 +69,10 @@ func (p *Plugin) ExecuteCommand(c *plugin.Context, args *model.CommandArgs) (*mo
 	}
 	username := user.Username
 
+	postPretext := fmt.Sprintf("Resource[%s] Locked by %s\n%s", targetResource, username, message)
 	integrationContext := model.StringInterface{
-		"resource": resourceName,
-		"message":  message,
-		"username": username,
+		"resource":        targetResource,
+		"originalMessage": postPretext,
 	}
 	releaseIntegration := &model.PostActionIntegration{
 		URL:     fmt.Sprintf("%s/plugins/%s/api/release", *p.serverConfig.ServiceSettings.SiteURL, manifest.Id),
@@ -86,7 +85,7 @@ func (p *Plugin) ExecuteCommand(c *plugin.Context, args *model.CommandArgs) (*mo
 	}
 
 	toReleaseAttachment := &model.SlackAttachment{
-		Pretext: targetResource + " " + message + " by " + username,
+		Pretext: postPretext,
 		Actions: []*model.PostAction{releaseAction},
 	}
 
@@ -154,11 +153,9 @@ func (p *Plugin) handleRelease(w http.ResponseWriter, r *http.Request) {
 
 	p.unlockResource(targetResource)
 
-	message := request.Context["message"].(string)
-	username := request.Context["username"].(string)
-	originalMessage := targetResource + " " + message + " by " + username
+	originalMessage := request.Context["originalMessage"].(string)
 	update := &model.Post{}
-	update.Message = originalMessage + "\n" + "Lock released at: " + time.Now().String()
+	update.Message = originalMessage + "\n" + "Lock released at: " + time.Now().Format(time.RFC3339)
 	props := model.StringInterface{}
 	props["attachments"] = []*model.SlackAttachment{}
 	update.Props = props
